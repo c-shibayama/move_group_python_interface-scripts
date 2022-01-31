@@ -53,6 +53,7 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 import csv
+from moveit_msgs.msg import PlanningScene, ObjectColor
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -122,6 +123,10 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## surrounding world:
         scene = moveit_commander.PlanningSceneInterface()
 
+        scene_pub = rospy.Publisher('planning_scene', PlanningScene, queue_size=5)
+        self.scene_pub = scene_pub
+        self.colors = dict()
+
         ## Instantiate a `MoveGroupCommander`_ object.  This object is an interface
         ## to a planning group (group of joints).  In this tutorial the group is the primary
         ## arm joints in the Panda robot, so we set the group's name to "panda_arm".
@@ -173,6 +178,8 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.planning_frame = planning_frame
         self.eef_link = eef_link
         self.group_names = group_names
+
+        
         
 
 
@@ -255,28 +262,34 @@ class MoveGroupPythonInterfaceTutorial(object):
             error_y = 0.005
         # boxの中心の座標を入力
         # z座標0: xy平面がboxの中心になる    
-        box_pose.pose.position.x += 0.3 #+ error_x
-        box_pose.pose.position.y += -0.2 #- error_y
+        box_pose.pose.position.x += 0.3 + error_x
+        box_pose.pose.position.y += -0.2 - error_y
         box_pose.pose.position.z += 0.25
         box_pose.pose.orientation.w = 1.0
         print(box_pose.pose.position)
         print("\n")
+        self.setColor(box_name1)
+        self.sendColors()
         scene.add_box(box_name1, box_pose, size=(0.02, 0.02, 0.5))
 
 
 
-        box_pose.pose.position.x += -0.2 + error_x
-        box_pose.pose.position.y += 0 - error_y
+        box_pose.pose.position.x += -0.2 #+ error_x
+        box_pose.pose.position.y += 0 #- error_y
         box_pose.pose.position.z += 0
         box_pose.pose.orientation.w = 1.0
         print(box_pose.pose.position)
+        self.setColor(box_name2)
+        self.sendColors()
         scene.add_box(box_name2, box_pose, size=(0.02, 0.02, 0.5))
 
-        box_pose.pose.position.x += 0 + error_x
-        box_pose.pose.position.y = 0 - error_y
-        box_pose.pose.position.z += 0 + 0.25 + 0.01
+        box_pose.pose.position.x += 0 #+ error_x
+        box_pose.pose.position.y = 0 + 0.01 - error_y
+        box_pose.pose.position.z += 0 + 0.25 -0.01
         box_pose.pose.orientation.w = 1.0
         print(box_pose.pose.position)
+        self.setColor(box_name3)
+        self.sendColors()
         scene.add_box(box_name3, box_pose, size=(0.02, 0.4, 0.02))
 
         
@@ -288,7 +301,21 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.box_name = box_name
         return self.wait_for_state_update(box_is_known=True, timeout=timeout)
 
-
+    def setColor(self, name, r=0.8, g=0.8, b=0.8, a = 0.4):
+        color = ObjectColor()
+        color.id = name
+        color.color.r = r
+        color.color.g = g
+        color.color.b = b
+        color.color.a = a
+        self.colors[name] = color
+    
+    def sendColors(self):
+        p = PlanningScene()
+        p.is_diff = True
+        for color in self.colors.values():
+            p.object_colors.append(color)
+        self.scene_pub.publish(p)
 
     def shifted_go_to_joint_start_state(self):
         # Copy class variables to local variables to make the web tutorials more clear.
@@ -306,10 +333,10 @@ class MoveGroupPythonInterfaceTutorial(object):
         # We get the joint values from the group and change some of the values:
 
         #print(move_group.get_interface_description())
-        print(move_group.get_planner_id())
+        #print(move_group.get_planner_id())
         #move_group.set_planner_id('shifted_jisaku6dof_arm[RRTConnect]')
         move_group.set_planner_id('shifted_jisaku6dof_arm[TRRT]')
-        print(move_group.get_planner_id())
+        #print(move_group.get_planner_id())
         
         
         joint_goal = move_group.get_current_joint_values()
@@ -556,9 +583,9 @@ class MoveGroupPythonInterfaceTutorial(object):
         # We get the joint values from the group and change some of the values:
 
         #print(move_group2.get_interface_description())
-        print(move_group2.get_planner_id())
+        #print(move_group2.get_planner_id())
         move_group2.set_planner_id('jisaku6def_arm[RRTConnect]')
-        print(move_group2.get_planner_id())
+        #print(move_group2.get_planner_id())
 
         joint_goal = move_group2.get_current_joint_values()
         joint_goal[0] = 0
