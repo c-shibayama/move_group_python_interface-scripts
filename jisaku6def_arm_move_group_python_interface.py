@@ -271,7 +271,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         # z座標0: xy平面がboxの中心になる
         height = 0.2
         height_ver2 = 0.44
-        height_ver3 = 0.28
+        height_ver3 = 0.24
         radius = 0.02
 
         x_1 = 0.3
@@ -289,8 +289,8 @@ class MoveGroupPythonInterfaceTutorial(object):
 
 
         x_2 = x_1 - 0.2
-        y_2 = -y_1
-        box_pose.pose.position.x = x_1 + error_x
+        y_2 = (y_1-radius)/2 
+        box_pose.pose.position.x = x_1-x_1/4 + error_x
         box_pose.pose.position.y = y_1/2 - error_y
         box_pose.pose.position.z = height_ver2/2
         box_pose.pose.orientation.w = 1.0
@@ -299,6 +299,20 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.setColor(box_name2)
         self.sendColors()
         scene.add_cylinder(box_name2, box_pose, height_ver2, radius)
+
+
+        box_pose.pose.position.x = x_1/2 + error_x
+        box_pose.pose.position.y = y_1/2 - error_y
+        box_pose.pose.position.z = height_ver2/2
+        box_pose.pose.orientation.x = .0
+        box_pose.pose.orientation.y = .0
+        box_pose.pose.orientation.z = .0
+        box_pose.pose.orientation.w = 1.0
+        print(box_pose.pose.position)
+        print("\n")
+        self.setColor(box_name3)
+        self.sendColors()
+        scene.add_cylinder(box_name3, box_pose, height_ver2, radius)
 
 
         box_pose.pose.position.x = x_2 + error_x
@@ -310,13 +324,13 @@ class MoveGroupPythonInterfaceTutorial(object):
         box_pose.pose.orientation.w = np.cos(pi/2/2)
         print(box_pose.pose.position)
         print("\n")
-        self.setColor(box_name3)
+        self.setColor(box_name4)
         self.sendColors()
-        scene.add_cylinder(box_name3, box_pose, height_ver2, radius)
+        scene.add_cylinder(box_name4, box_pose, height_ver2, radius)
 
 
         box_pose.pose.position.x = x_1 + error_x
-        box_pose.pose.position.y = -0.1 - error_y
+        box_pose.pose.position.y = y_2 - error_y
         box_pose.pose.position.z = height_ver2 + radius
         box_pose.pose.orientation.x = np.sin(pi/2/2)
         box_pose.pose.orientation.y = .0
@@ -324,24 +338,9 @@ class MoveGroupPythonInterfaceTutorial(object):
         box_pose.pose.orientation.w = np.cos(pi/2/2)
         print(box_pose.pose.position)
         print("\n")
-        self.setColor(box_name4)
-        self.sendColors()
-        scene.add_cylinder(box_name4, box_pose, height_ver3, radius)
-
-        box_pose.pose.position.x = x_1/2 + error_x
-        box_pose.pose.position.y = y_1/2 - error_y
-        box_pose.pose.position.z = height_ver2/2
-        box_pose.pose.orientation.x = .0
-        box_pose.pose.orientation.y = .0
-        box_pose.pose.orientation.z = .0
-        box_pose.pose.orientation.w = 1.0
-        print(box_pose.pose.position)
-        print("\n")
         self.setColor(box_name5)
         self.sendColors()
-        scene.add_cylinder(box_name5, box_pose, height_ver2, radius)
-        
-        
+        scene.add_cylinder(box_name5, box_pose, height_ver3, radius)
 
         ## END_SUB_TUTORIAL
         # Copy local variables back to class variables. In practice, you should use the class
@@ -407,20 +406,24 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         # For testing:
         current_joints = move_group.get_current_joint_values()
-        current_pose = move_group.get_current_pose()
         print(current_joints)
-        print(current_pose)
+
+        current_position = move_group.get_current_pose().pose.position
+        print("base frame: ", current_position)
+        current_position_shifted_frame = current_position
+
+        current_position_shifted_frame.x += 1.5-0.03
+        current_position_shifted_frame.y += -0.02
+        print("shifted_Base frame: ", current_position_shifted_frame)
 
 
         #print('yeah')
 
         return all_close(joint_goal, current_joints, 0.01)
 
-
-    def shifted_check_go_to_plan(self):
+    def shifted_decide_position_goal(self):
         move_group = self.move_group
         scene = self.scene
-
 
         object_position = scene.get_object_poses(["shifted_box1"])
         object = scene.get_objects(["shifted_box1"])
@@ -439,9 +442,20 @@ class MoveGroupPythonInterfaceTutorial(object):
         goal_pos.y = object_pos_y + object_radius*2
         goal_pos.z = object_pos_z
         print(goal_pos)
+
+        self.goal_pos = goal_pos
+
+
+    def shifted_check_go_to_plan(self):
+        move_group = self.move_group
+        goal_pos =self.goal_pos
         
         #print(move_group.get_interface_description())
         print(move_group.get_planner_id())
+        print("\n")
+        print(move_group.get_planning_frame())
+        print("\n")
+
         move_group.set_position_target([
             goal_pos.x, goal_pos.y, goal_pos.z
             ])
@@ -453,63 +467,53 @@ class MoveGroupPythonInterfaceTutorial(object):
         num_points = len(points)
         print(num_points)
 
-        current_pose = self.move_group.get_current_pose().pose
-        print(current_pose)
+        current_pose = move_group.get_current_pose().pose
+        current_position = move_group.get_current_pose().pose.position
+        #print("base frame: ", current_position)
+        current_position_shifted_frame = current_position
+
+        current_position_shifted_frame.x += 1.5-0.03
+        current_position_shifted_frame.y += -0.02
+        print("shifted_Base frame: ", current_position_shifted_frame)
 
         self.plan = plan
         return all_close(goal_pos, current_pose, 0.01)
 
 
-    def shifted_go_to_pose_goal(self):
+    def shifted_go_to_position_goal(self):
         # Copy class variables to local variables to make the web tutorials more clear.
         # In practice, you should use the class variables directly unless you have a good
         # reason not to.
         move_group = self.move_group
+        goal_pos =self.goal_pos
+        
 
-        ## BEGIN_SUB_TUTORIAL plan_to_pose
-        ##
-        ## Planning to a Pose Goal
-        ## ^^^^^^^^^^^^^^^^^^^^^^^
-        ## We can plan a motion for this group to a desired pose for the
-        ## end-effector:
-        pose_goal = geometry_msgs.msg.Pose()
-        pose_goal.orientation.w = 1.0
-        pose_goal.position.x = 0.5
-        pose_goal.position.y = 0.3
-        pose_goal.position.z = -0.5
-
-
-        print(move_group.get_interface_description())
-
-        #move_group.set_planner_id('RRTkConfigDefault')
-
-        #move_group.set_pose_target(pose_goal)
-
-        move_group.set_position_target([
-            pose_goal.position.x, pose_goal.position.y, pose_goal.position.z])
-
-        #move_group.set_orientation_target([0, -1, 0, 0])
-
-        ## Now, we call the planner to compute the plan and execute it.
-        plan = move_group.plan()
+        print(move_group.get_planner_id())
+        print("\n")
+        print(move_group.get_planning_frame())
         
         # plan = (True, moveit_msgs/RobotTrajectory)
         # 欲しいのは plan[1]
         
-        move_group.execute(plan[1], wait=True)
+        move_group.set_position_target([
+            goal_pos.x, goal_pos.y, goal_pos.z
+            ])
+        
+        plan = move_group.plan()
+        #move_group.execute(plan[1], wait=True)
 
-        #print(plan)
+        points = plan[1].joint_trajectory.points
+        num_points = len(points)
+        print(num_points)
 
-        #print(move_group.get_pose_reference_frame())
-        print(move_group.get_planning_frame())
+        current_pose = self.move_group.get_current_pose().pose
+        print(current_pose)
+
+        #print(plan[1])
 
         #with open('/home/cshiba/kyoudoukenkyu/autonomous-control-simulation-master/plan.csv', 'w') as f:
         #    writer = csv.writer(f)
-        #    writer.writerows(plan)
-
-
-        #move_group.go(wait=True)
-        #move_group.execute(plan, wait=True)
+        #    writer.writerows(plan[1])
         
         # Calling `stop()` ensures that there is no residual movement
         #move_group.stop()
@@ -522,14 +526,14 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         num_points = len(points)
 
-        print(num_points)
+        print("経路点: {}個" .format(num_points))
 
         joint_goal = move_group.get_current_joint_values()
 
         joints_goal = copy.deepcopy(joint_goal)
 
         num_joint = len(joints_goal)
-        print(num_joint)
+        #print(num_joint)
 
         trajectory_position = []
 
@@ -539,19 +543,23 @@ class MoveGroupPythonInterfaceTutorial(object):
             for j in range(num_joint):
                 joints_goal[j] = trajectory_joint[j]
                 #print(joints_goal[j])
-            #print(i, ":",  joints_goal)
-            #move_group.go(joints_goal, wait=True)
+            print(i, "目標関節角:",  joints_goal)
+            move_group.go(joints_goal, wait=True)
 
-            x = move_group.get_current_pose().pose.position.x
-            y = move_group.get_current_pose().pose.position.y
-            z = move_group.get_current_pose().pose.position.z
+            x_base = move_group.get_current_pose().pose.position.x
+            y_base = move_group.get_current_pose().pose.position.y
+            z_base = move_group.get_current_pose().pose.position.z
 
-            trajectory_position.append([x, y,z])
-            #print(trajectory_position[i])
+            x_shifted_Base = x_base + 0.5 - 0.03
+            y_shifted_Base = y_base -0.02
+            z_shifted_Base = y_base
 
-        #with open('/home/cshiba/kyoudoukenkyu/autonomous-control-simulation-master/trajectory_position_list.csv', 'w') as f:
-        #    writer = csv.writer(f)
-        #    writer.writerows(trajectory_position)
+            trajectory_position.append([x_shifted_Base, y_shifted_Base,z_shifted_Base])
+            print("　　目標手先位置: ", trajectory_position[i])
+
+        with open('/home/cshiba/kyoudoukenkyu/autonomous-control-simulation-master/trajectory_position_list.csv', 'w') as f:
+            writer = csv.writer(f)
+            writer.writerows(trajectory_position)
 
         
 
@@ -561,10 +569,12 @@ class MoveGroupPythonInterfaceTutorial(object):
         # Note that since this section of code will not be included in the tutorials
         # we use the class variable rather than the copied state variable
         current_pose = move_group.get_current_pose().pose
-        print(current_pose)
+        current_position_shifted_frame.x += 1.5-0.03
+        current_position_shifted_frame.y += -0.02
+        print("shifted_Base frame: ", current_position_shifted_frame)
 
         self.plan = plan
-        return all_close(pose_goal, current_pose, 0.01)
+        return all_close(goal_pos, current_pose, 0.01)
     
 
     def update_setting(self):
@@ -718,9 +728,14 @@ def main():
         input("============ Press `Enter` to execute a movement using a joint start state by shifted_arm ...")
         tutorial.shifted_go_to_joint_start_state()
 
-        input("============ Press `Enter` to execute a movement using a pose goal by shifted_arm ...")
-        #tutorial.go_to_pose_goal()
+        input("============ Press `Enter` to decide a position goal by shifted_arm ...")
+        tutorial.shifted_decide_position_goal()
+
+        input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
         tutorial.shifted_check_go_to_plan()
+
+        input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
+        tutorial.shifted_go_to_position_goal()
 
 
 
