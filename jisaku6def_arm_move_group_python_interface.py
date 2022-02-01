@@ -54,6 +54,7 @@ import moveit_msgs.msg
 import geometry_msgs.msg
 import csv
 from moveit_msgs.msg import PlanningScene, ObjectColor
+import numpy as np
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -243,6 +244,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## Adding Objects to the Planning Scene
         ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ## First, we will create a box in the planning scene between the fingers:
+        
         box_pose = geometry_msgs.msg.PoseStamped()
 
         if frame == "base":
@@ -250,48 +252,94 @@ class MoveGroupPythonInterfaceTutorial(object):
             box_name1 = "box1"
             box_name2 = "box2"
             box_name3 = 'box3'
+            box_name4 = 'box4'
+            box_name5 = 'box5'
             error_x = 0
             error_y = 0
-            print("yeah")
-        if frame == "shifted_base":
+
+        elif frame == "shifted_base":
             box_pose.header.frame_id = "shifted_base"
             box_name1 = "shifted_box1"
             box_name2 = "shifted_box2"
             box_name3 = "shifted_box3"
+            box_name4 = 'shifted_box4'
+            box_name5 = 'shifted_box5'
             error_x = 0.002
             error_y = 0.005
+
         # boxの中心の座標を入力
-        # z座標0: xy平面がboxの中心になる    
-        box_pose.pose.position.x += 0.3 + error_x
-        box_pose.pose.position.y += -0.2 - error_y
-        box_pose.pose.position.z += 0.25
+        # z座標0: xy平面がboxの中心になる
+        height = 0.2
+        height_ver2 = 0.44
+        height_ver3 = 0.28
+        radius = 0.02
+
+        x_1 = 0.3
+        y_1 = -0.22
+        print(box_pose.pose.position)
+        box_pose.pose.position.x = x_1 + error_x
+        box_pose.pose.position.y = y_1 - error_y
+        box_pose.pose.position.z = height/2
         box_pose.pose.orientation.w = 1.0
         print(box_pose.pose.position)
         print("\n")
         self.setColor(box_name1)
         self.sendColors()
-        scene.add_box(box_name1, box_pose, size=(0.02, 0.02, 0.5))
+        scene.add_cylinder(box_name1, box_pose, height, radius)
 
 
-
-        box_pose.pose.position.x += -0.2 #+ error_x
-        box_pose.pose.position.y += 0 #- error_y
-        box_pose.pose.position.z += 0
+        x_2 = x_1 - 0.2
+        y_2 = -y_1
+        box_pose.pose.position.x = x_1 + error_x
+        box_pose.pose.position.y = y_1/2 - error_y
+        box_pose.pose.position.z = height_ver2/2
         box_pose.pose.orientation.w = 1.0
         print(box_pose.pose.position)
+        print("\n")
         self.setColor(box_name2)
         self.sendColors()
-        scene.add_box(box_name2, box_pose, size=(0.02, 0.02, 0.5))
+        scene.add_cylinder(box_name2, box_pose, height_ver2, radius)
 
-        box_pose.pose.position.x += 0 #+ error_x
-        box_pose.pose.position.y = 0 + 0.01 - error_y
-        box_pose.pose.position.z += 0 + 0.25 -0.01
-        box_pose.pose.orientation.w = 1.0
+
+        box_pose.pose.position.x = x_2 + error_x
+        box_pose.pose.position.y = 0 - error_y
+        box_pose.pose.position.z = height_ver2 + radius
+        box_pose.pose.orientation.x = np.sin(pi/2/2)
+        box_pose.pose.orientation.y = .0
+        box_pose.pose.orientation.z = .0
+        box_pose.pose.orientation.w = np.cos(pi/2/2)
         print(box_pose.pose.position)
+        print("\n")
         self.setColor(box_name3)
         self.sendColors()
-        scene.add_box(box_name3, box_pose, size=(0.02, 0.4, 0.02))
+        scene.add_cylinder(box_name3, box_pose, height_ver2, radius)
 
+
+        box_pose.pose.position.x = x_1 + error_x
+        box_pose.pose.position.y = -0.1 - error_y
+        box_pose.pose.position.z = height_ver2 + radius
+        box_pose.pose.orientation.x = np.sin(pi/2/2)
+        box_pose.pose.orientation.y = .0
+        box_pose.pose.orientation.z = .0
+        box_pose.pose.orientation.w = np.cos(pi/2/2)
+        print(box_pose.pose.position)
+        print("\n")
+        self.setColor(box_name4)
+        self.sendColors()
+        scene.add_cylinder(box_name4, box_pose, height_ver3, radius)
+
+        box_pose.pose.position.x = x_1/2 + error_x
+        box_pose.pose.position.y = y_1/2 - error_y
+        box_pose.pose.position.z = height_ver2/2
+        box_pose.pose.orientation.x = .0
+        box_pose.pose.orientation.y = .0
+        box_pose.pose.orientation.z = .0
+        box_pose.pose.orientation.w = 1.0
+        print(box_pose.pose.position)
+        print("\n")
+        self.setColor(box_name5)
+        self.sendColors()
+        scene.add_cylinder(box_name5, box_pose, height_ver2, radius)
         
         
 
@@ -376,20 +424,20 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         object_position = scene.get_object_poses(["shifted_box1"])
         object = scene.get_objects(["shifted_box1"])
-        #print(position)
-        #print(object)
+        print(object_position)
+        print(object)
         object_pos_x = object_position.get('shifted_box1').position.x
         object_pos_y = object_position.get('shifted_box1').position.y
+        object_pos_z = object_position.get('shifted_box1').position.z
         #print(object_pos_x)
 
-        object_demensions_x = object.get('shifted_box1').primitives[0].dimensions[0]
-        object_demensions_y = object.get('shifted_box1').primitives[0].dimensions[0]
+        object_radius = object.get('shifted_box1').primitives[0].dimensions[1]
         #print(object_demensions_x)
         goal_pos = geometry_msgs.msg.Pose().position
 
-        goal_pos.x = object_pos_x + object_demensions_x/2 + 0.02
-        goal_pos.y = object_pos_y + object_demensions_y/2 - 0.02
-        goal_pos.z = 0.4
+        goal_pos.x = object_pos_x #+ object_radius + 0.02
+        goal_pos.y = object_pos_y + object_radius*2
+        goal_pos.z = object_pos_z
         print(goal_pos)
         
         #print(move_group.get_interface_description())
