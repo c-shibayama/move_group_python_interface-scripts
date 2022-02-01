@@ -44,6 +44,7 @@
 
 # Python 2/3 compatibility imports
 from __future__ import print_function
+from cv2 import QT_STYLE_OBLIQUE
 from six.moves import input
 
 import sys
@@ -264,7 +265,7 @@ class MoveGroupPythonInterfaceTutorial(object):
             box_name3 = "shifted_box3"
             box_name4 = 'shifted_box4'
             box_name5 = 'shifted_box5'
-            error_x = 0.002
+            error_x = 0.01
             error_y = 0.005
 
         # boxの中心の座標を入力
@@ -428,7 +429,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         object_position = scene.get_object_poses(["shifted_box1"])
         object = scene.get_objects(["shifted_box1"])
         print(object_position)
-        print(object)
+        #print(object)
         object_pos_x = object_position.get('shifted_box1').position.x
         object_pos_y = object_position.get('shifted_box1').position.y
         object_pos_z = object_position.get('shifted_box1').position.z
@@ -438,8 +439,8 @@ class MoveGroupPythonInterfaceTutorial(object):
         #print(object_demensions_x)
         goal_pos = geometry_msgs.msg.Pose().position
 
-        goal_pos.x = object_pos_x #+ object_radius + 0.02
-        goal_pos.y = object_pos_y + object_radius*2
+        goal_pos.x = object_pos_x + object_radius*3 # + 0.02
+        goal_pos.y = object_pos_y #+ object_radius*3
         goal_pos.z = object_pos_z
         print(goal_pos)
 
@@ -490,7 +491,7 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         print(move_group.get_planner_id())
         print("\n")
-        print(move_group.get_planning_frame())
+        #print(move_group.get_planning_frame())
         
         # plan = (True, moveit_msgs/RobotTrajectory)
         # 欲しいのは plan[1]
@@ -504,10 +505,15 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         points = plan[1].joint_trajectory.points
         num_points = len(points)
-        print(num_points)
+        print(num_points, "個の経路点")
 
         current_pose = self.move_group.get_current_pose().pose
-        print(current_pose)
+        current_position = move_group.get_current_pose().pose.position
+        #print("base frame: ", current_position)
+        current_position_shifted_frame = current_position
+        current_position_shifted_frame.x += 1.5-0.03
+        current_position_shifted_frame.y += -0.02
+        print("current_position on shifted_Base frame :\n", current_position_shifted_frame)
 
         #print(plan[1])
 
@@ -543,16 +549,16 @@ class MoveGroupPythonInterfaceTutorial(object):
             for j in range(num_joint):
                 joints_goal[j] = trajectory_joint[j]
                 #print(joints_goal[j])
-            print(i, "目標関節角:",  joints_goal)
+            print(i, ": 目標関節角:",  joints_goal)
             move_group.go(joints_goal, wait=True)
 
             x_base = move_group.get_current_pose().pose.position.x
             y_base = move_group.get_current_pose().pose.position.y
             z_base = move_group.get_current_pose().pose.position.z
 
-            x_shifted_Base = x_base + 0.5 - 0.03
+            x_shifted_Base = x_base + 1.5 - 0.03
             y_shifted_Base = y_base -0.02
-            z_shifted_Base = y_base
+            z_shifted_Base = z_base
 
             trajectory_position.append([x_shifted_Base, y_shifted_Base,z_shifted_Base])
             print("　　目標手先位置: ", trajectory_position[i])
@@ -569,9 +575,11 @@ class MoveGroupPythonInterfaceTutorial(object):
         # Note that since this section of code will not be included in the tutorials
         # we use the class variable rather than the copied state variable
         current_pose = move_group.get_current_pose().pose
+        current_position = move_group.get_current_pose().pose.position
+        current_position_shifted_frame = current_position
         current_position_shifted_frame.x += 1.5-0.03
         current_position_shifted_frame.y += -0.02
-        print("shifted_Base frame: ", current_position_shifted_frame)
+        print("current_position on shifted_Base frame :\n", current_position_shifted_frame)
 
         self.plan = plan
         return all_close(goal_pos, current_pose, 0.01)
@@ -731,8 +739,8 @@ def main():
         input("============ Press `Enter` to decide a position goal by shifted_arm ...")
         tutorial.shifted_decide_position_goal()
 
-        input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
-        tutorial.shifted_check_go_to_plan()
+        #input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
+        #tutorial.shifted_check_go_to_plan()
 
         input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
         tutorial.shifted_go_to_position_goal()
