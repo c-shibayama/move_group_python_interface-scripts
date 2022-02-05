@@ -444,6 +444,12 @@ class MoveGroupPythonInterfaceTutorial(object):
         goal_pos.z = object_pos_z
         print(goal_pos)
 
+        goal_pos_on_shifted_Base = geometry_msgs.msg.Pose().position
+        oal_pos_on_shifted_Base.x = goal_pos.x + 1.5 - 0.03
+        oal_pos_on_shifted_Base.y = goal_pos.y - 0.02
+        oal_pos_on_shifted_Base.z = goal_pos.z
+        print(goal_pos_on_shifted_Base)
+
         self.goal_pos = goal_pos
 
 
@@ -463,6 +469,10 @@ class MoveGroupPythonInterfaceTutorial(object):
         
         plan = move_group.plan()
         move_group.execute(plan[1], wait=True)
+
+        current_joints = move_group.get_current_joint_values()
+        print(current_joints)
+        print(plan[1])
 
         points = plan[1].joint_trajectory.points
         num_points = len(points)
@@ -739,11 +749,11 @@ def main():
         input("============ Press `Enter` to decide a position goal by shifted_arm ...")
         tutorial.shifted_decide_position_goal()
 
-        #input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
-        #tutorial.shifted_check_go_to_plan()
+        input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
+        tutorial.shifted_check_go_to_plan()
 
-        input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
-        tutorial.shifted_go_to_position_goal()
+        #input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
+        #tutorial.shifted_go_to_position_goal()
 
 
 
