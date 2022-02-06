@@ -445,9 +445,9 @@ class MoveGroupPythonInterfaceTutorial(object):
         print(goal_pos)
 
         goal_pos_on_shifted_Base = geometry_msgs.msg.Pose().position
-        oal_pos_on_shifted_Base.x = goal_pos.x + 1.5 - 0.03
-        oal_pos_on_shifted_Base.y = goal_pos.y - 0.02
-        oal_pos_on_shifted_Base.z = goal_pos.z
+        goal_pos_on_shifted_Base.x = goal_pos.x + 1.5 - 0.03
+        goal_pos_on_shifted_Base.y = goal_pos.y - 0.02
+        goal_pos_on_shifted_Base.z = goal_pos.z
         print(goal_pos_on_shifted_Base)
 
         self.goal_pos = goal_pos
@@ -489,6 +489,29 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         self.plan = plan
         return all_close(goal_pos, current_pose, 0.01)
+
+    def check_a_plan(self):
+        move_group = self.move_group
+
+        with open('/home/cshiba/kyoudoukenkyu/autonomous-control-simulation-master/trajectory_position_list_4th_(02_01).csv') as f:
+            reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+    
+            trajectory_position_list = [trajectory_position for trajectory_position in reader]
+            l = len(trajectory_position_list)
+
+            for i in range(l):
+                trajectory_position_list[i][0] += -1.5+0.03
+                trajectory_position_list[i][1] += 0.02
+                position_goal = trajectory_position_list[i]
+                print(position_goal)
+                move_group.set_position_target([
+                    position_goal[0], position_goal[1], position_goal[2]
+                    ])
+                move_group.go()
+            
+
+
+        
 
 
     def shifted_go_to_position_goal(self):
@@ -738,7 +761,7 @@ def main():
         input("============ Press `Enter` to add a box to the base planning scene ...")
         tutorial.add_box("base")
 
-        input("============ Press `Enter` to add a box to the shifted base planning scene ...")
+        #input("============ Press `Enter` to add a box to the shifted base planning scene ...")
         tutorial.add_box("shifted_base")
 
 
@@ -746,8 +769,11 @@ def main():
         input("============ Press `Enter` to execute a movement using a joint start state by shifted_arm ...")
         tutorial.shifted_go_to_joint_start_state()
 
-        input("============ Press `Enter` to decide a position goal by shifted_arm ...")
+        #input("============ Press `Enter` to decide a position goal by shifted_arm ...")
         tutorial.shifted_decide_position_goal()
+
+        #input("============ Press `Enter` to check a reserved plan by shifted_arm ...")
+        #tutorial.check_a_plan()
 
         input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
         tutorial.shifted_check_go_to_plan()
