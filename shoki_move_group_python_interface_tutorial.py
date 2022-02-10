@@ -188,7 +188,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## We use the constant `tau = 2*pi <https://en.wikipedia.org/wiki/Turn_(angle)#Tau_proposals>`_ for convenience:
         # We get the joint values from the group and change some of the values:
 
-        print(move_group.get_interface_description())
+        #print(move_group.get_interface_description())
         
         joint_goal = move_group.get_current_joint_values()
         joint_goal[0] = 0
@@ -211,7 +211,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         # For testing:
         current_joints = move_group.get_current_joint_values()
 
-        print(move_group.get_planner_id())
+        #print(move_group.get_planner_id())
         print('yeah')
         #print(move_group.get_interface_description())
 
@@ -238,7 +238,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         pose_goal.position.z = 0.5
 
 
-        print(move_group.get_interface_description())
+        #print(move_group.get_interface_description())
 
         #move_group.set_planner_id('RRTkConfigDefault')
 
@@ -299,6 +299,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         (plan, fraction) = move_group.compute_cartesian_path(
             waypoints, 0.01, 0.0  # waypoints to follow  # eef_step
         )  # jump_threshold
+        #print(plan)
 
         # Note: We are just planning, not asking move_group to actually move the robot yet:
         return plan, fraction
@@ -327,6 +328,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         display_trajectory.trajectory_start = robot.get_current_state()
         display_trajectory.trajectory.append(plan)
         # Publish
+        print(display_trajectory)
         display_trajectory_publisher.publish(display_trajectory)
 
         ## END_SUB_TUTORIAL

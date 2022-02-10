@@ -387,8 +387,9 @@ class MoveGroupPythonInterfaceTutorial(object):
         joint_goal = move_group.get_current_joint_values()
     
         # joint_goal[0]: ベースの回転に合わせてその分だけ -方向にずらす
+        # ↑間違い
         kaiten_gosa = -pi/18
-        joint_goal[0] = kaiten_gosa
+        joint_goal[0] = 0
 
         joint_goal[1] = pi/4 #-tau / 9
         joint_goal[2] = -3*pi/4 #-tau / 9
@@ -473,7 +474,7 @@ class MoveGroupPythonInterfaceTutorial(object):
             ])
         
         plan = move_group.plan()
-        move_group.execute(plan[1], wait=True)
+        #move_group.execute(plan[1], wait=True)
 
         current_joints = move_group.get_current_joint_values()
         print(current_joints)
@@ -507,7 +508,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         # reason not to.
         move_group = self.move_group
         goal_pos =self.goal_pos
-        kaiten_gosa = self.kaiten_gosa
         
 
         print(move_group.get_planner_id())
@@ -577,8 +577,6 @@ class MoveGroupPythonInterfaceTutorial(object):
             current_position_on_shifted_base.y += 0
             #print("shifted_base を原点としたときの current_position :\n", current_position_on_shifted_base)
 
-            
-            # センサ空間において，実空間と同じ位置にあるものは同じ位置にあると観測
             target_pos = current_position_on_shifted_base
 
             trajectory_position.append([
@@ -606,9 +604,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         current_position_on_shifted_base.x += from_shifted_base_to_base
         current_position_on_shifted_base.y += 0
         print("shifted_base を原点としたときの current_position :\n", current_position_on_shifted_base)
-
-        
-        # センサ空間において，実空間と同じ位置にあるものは同じ位置にあると観測
 
         self.plan = plan
         return all_close(goal_pos, current_pose, 0.01)
@@ -682,13 +677,8 @@ class MoveGroupPythonInterfaceTutorial(object):
         move_group2.set_planner_id('jitu_kukan_arm[TRRT]')
         #print(move_group2.get_planner_id())
 
-        plan = self.plan
-        start_joint = plan[1].joint_trajectory.points[0].positions
-        print(start_joint)
-        print(start_joint[0])
-
         joint_goal = move_group2.get_current_joint_values()
-        joint_goal[0] = start_joint[0]
+        joint_goal[0] = 0
         joint_goal[1] = pi/4 #-tau / 9
         joint_goal[2] = -3*pi/4 #-tau / 9
         joint_goal[3] = 0 #-tau / 6
@@ -707,7 +697,7 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         # For testing:
         current_joints = move_group2.get_current_joint_values()
-        current_pose = move_group2.get_current_pose()
+        current_pose = move_group2.get_current_pose().pose
         print(current_joints)
         print(current_pose)
 
@@ -717,56 +707,10 @@ class MoveGroupPythonInterfaceTutorial(object):
 
 
 
-        return all_close(joint_goal, current_joints, 0.01)
-
-    def jitu_kukan_go_to_start_pose(self):
-      move_group2 = self.move_group2
-      kaiten_gosa = self.kaiten_gosa
-      #sensa_kukan_first_pose = self.sensa_kukan_first_pose
-      #print(sensa_kukan_first_pose)
-
-      current_position = move_group2.get_current_pose().pose.position
-      jitu_kukan_first_pose = move_group2.get_current_pose().pose
-
-      # センサ空間において，実空間と同じ位置にあるものは同じ位置にあると観測
-      # 位置合わせ
-      r_2jou = current_position.x**2.0 + current_position.y**2.0
-      r = sqrt(r_2jou)
-      
-      # theta: shifted_Base の回転誤差角度
-      # phi: current_position_on_shifted_base の (x, y) 点で作る直角三角形の角度
-      theta = -kaiten_gosa
-      phi = acos(current_position.x / r)
-      phi_yobi = asin(current_position.y / r)
-      print("phi: ", phi)
-      #print("phi_yobi: ", phi_yobi)
-
-      jitu_kukan_first_pose.position.x = r * cos(phi-theta)
-      jitu_kukan_first_pose.position.y = r * sin(phi-theta)
-      print(jitu_kukan_first_pose)
-
-      #jitu_kukan_first_pose = sensa_kukan_first_pose
-      #jitu_kukan_first_pose.position.x += from_shifted_base_to_base
-
-      move_group2.set_pose_target(jitu_kukan_first_pose)
-    
-      plan_first = move_group2.go(wait=True)
-
-      move_group2.stop()
-
-      move_group2.clear_pose_targets()
-
-      current_pose = move_group2.get_current_pose().pose
-      print(current_pose)
-
-
-
-
 
     def go_to_plan(self):
         plan = self.plan
         move_group2 = self.move_group2
-        kaiten_gosa = self.kaiten_gosa
 
         print(move_group2.get_planner_id())
 
@@ -786,30 +730,26 @@ class MoveGroupPythonInterfaceTutorial(object):
         
 
         move_group2.execute(plan[1], wait=True)
+        #display_trajectory_publisher.publish(plan[1])
 
         print(move_group2.get_current_joint_values())
 
         current_position = move_group2.get_current_pose().pose.position
         print("T-RRTのみで動作したとき，最終位置 current_position :\n", current_position)
-        current_position_on_shifted_base = current_position
 
-        # センサ空間において，実空間と同じ位置にあるものは同じ位置にあると観測
-        # 位置合わせ
-        r_2jou = current_position_on_shifted_base.x**2.0 + current_position_on_shifted_base.y**2.0
-        r = sqrt(r_2jou)
-        target_pos = current_position_on_shifted_base
-        
-        # theta: shifted_Base の回転誤差角度
-        # phi: current_position_on_shifted_base の (x, y) 点で作る直角三角形の角度
-        theta = -kaiten_gosa
-        phi = acos(current_position_on_shifted_base.x / r)
-        phi_yobi = asin(current_position_on_shifted_base.y / r)
-        print("phi: ", phi)
-        print("phi_yobi: ", phi_yobi)
+    def display_trajectory(self):
+        plan = self.plan
+        move_group2 = self.move_group2
+        robot2 = self.robot2
+        display_trajectory_publisher = self.display_trajectory_publisher
 
-        target_pos.x = r * cos(phi-theta)
-        target_pos.y = r * sin(phi-theta)
-        print(target_pos)
+        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        display_trajectory.trajectory_start = robot2.get_current_state()
+        display_trajectory.trajectory.append(plan[1])
+        display_trajectory_publisher.publish(display_trajectory)
+
+
+    
 
 
 def main():
@@ -854,14 +794,16 @@ def main():
 
 
 
-        #input("============ Press `Enter` to execute a movement using a joint start state ...")
-        #tutorial.go_to_joint_start_state()
+        input("============ Press `Enter` to execute a movement using a joint start state ...")
+        tutorial.go_to_joint_start_state()
 
-        input("============ Press `Enter` to execute a movement using a jitu_kukan_start_pose ...")
-        tutorial.jitu_kukan_go_to_start_pose()
 
         input("============ Press `Enter` to execute a movement using a plan by jit_kukan_arm ...")
         tutorial.go_to_plan()
+
+        input("============ Press `Enter` to display trajctory by jitu_kukan_arm ...")
+        tutorial.display_trajectory()
+
 
 
 
