@@ -607,6 +607,16 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         self.plan = plan
         return all_close(goal_pos, current_pose, 0.01)
+
+    def display_trajectory_sensa_kukan(self):
+        plan = self.plan
+        robot = self.robot
+        display_trajectory_publisher = self.display_trajectory_publisher
+
+        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        display_trajectory.trajectory_start = robot.get_current_state()
+        display_trajectory.trajectory.append(plan[1])
+        display_trajectory_publisher.publish(display_trajectory)
     
 
     def update_setting(self):
@@ -730,14 +740,13 @@ class MoveGroupPythonInterfaceTutorial(object):
         
 
         move_group2.execute(plan[1], wait=True)
-        #display_trajectory_publisher.publish(plan[1])
 
         print(move_group2.get_current_joint_values())
 
         current_position = move_group2.get_current_pose().pose.position
         print("T-RRTのみで動作したとき，最終位置 current_position :\n", current_position)
 
-    def display_trajectory(self):
+    def display_trajectory_jitu_kukan(self):
         plan = self.plan
         move_group2 = self.move_group2
         robot2 = self.robot2
@@ -778,14 +787,18 @@ def main():
         input("============ Press `Enter` to decide a position goal by shifted_arm ...")
         tutorial.shifted_decide_position_goal()
 
+
         #input("============ Press `Enter` to check a reserved plan by shifted_arm ...")
         #tutorial.check_a_plan()
 
-        input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
-        tutorial.shifted_check_go_to_plan()
+        #input("============ Press `Enter` to check a plan using a position goal by shifted_arm ...")
+        #tutorial.shifted_check_go_to_plan()
 
-        #input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
-        #tutorial.shifted_go_to_position_goal()
+        input("============ Press `Enter` to execute, write and save a plan using a position goal by shifted_arm ...")
+        tutorial.shifted_go_to_position_goal()
+
+        input("============ Press `Enter` to display trajctory by jitu_kukan_arm ...")
+        tutorial.display_trajectory_sensa_kukan()
 
 
 
@@ -802,7 +815,7 @@ def main():
         tutorial.go_to_plan()
 
         input("============ Press `Enter` to display trajctory by jitu_kukan_arm ...")
-        tutorial.display_trajectory()
+        tutorial.display_trajectory_jitu_kukan()
 
 
 
