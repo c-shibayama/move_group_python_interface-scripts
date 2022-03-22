@@ -1,3 +1,6 @@
+センサ空間で軌道計画し，軌道をcsvファイルに保存．
+またその軌道をそのまま実空間で用いてマニピュレータを動作
+
 配置
 ~/ws_moveit/src/moveit_tutorials/doc/move_group_python_interface/scripts
 実行コマンド
