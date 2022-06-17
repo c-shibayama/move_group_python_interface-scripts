@@ -135,10 +135,11 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## arm planning group.
         ## This interface can be used to plan and execute motions:
         # group_name = "jisaku6dof_arm"
-        group_name = "base_frame"
+        # group_name = "jisaku6dof_arm_no_virtual_joint"
+        group_name = "virtual_joint"
         move_group = moveit_commander.MoveGroupCommander(group_name)
 
-        ## Create a `DisplayTrajectory`_ ROS publisher which is used to display
+        ## Create a `DisplayTrajectory`_ ROS publisher which is used t o display
         ## trajectories in Rviz:
         display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
@@ -199,21 +200,28 @@ class MoveGroupPythonInterfaceTutorial(object):
         multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
         print(multi_dof_joint_state.transforms[0].rotation)
         print("")
-        print(robot_state)
+        # print(robot_state)
+        self.robot_state = robot_state
 
         move_group.set_start_state(robot_state)
+        # current_joints = move_group.get_current_joint_values()
+        # print(current_joints)
+        # print("============ Printing robot state")
+        # print(self.robot.get_current_state())
     
     def move_frame_on_go_to_joint(self):
         move_group = self.move_group
 
         joint_goal = move_group.get_current_joint_values()
         print(joint_goal)
+        # joint_goal[0] = 0.5
         rotation = [0., 0., 0.70710678, 0.70710678]
         for i in range(4):
             joint_goal[i+3] = rotation[i]
         print(joint_goal)
-
-        move_group.go(joint_goal, wait=True)
+        move_group.set_joint_value_target("virtual_joint", [0, 0, 0, 0., 0., 0.25881905, 0.96592583])
+        # move_group.go(joint_goal, wait=True)
+        move_group.go()
 
         move_group.stop()
 
@@ -223,66 +231,60 @@ class MoveGroupPythonInterfaceTutorial(object):
         print(self.robot.get_current_state())
         print("")
 
-        #print(move_group.get_planner_id())
-        print('yeah')
-        #print(move_group.get_interface_description())
-
-
 
         return all_close(joint_goal, current_joints, 0.01)
 
-    def go_to_joint_state(self):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
-        move_group = self.move_group
-
-        ## BEGIN_SUB_TUTORIAL plan_to_joint_state
-        ##
-        ## Planning to a Joint Goal
-        ## ^^^^^^^^^^^^^^^^^^^^^^^^
-        ## The Panda's zero configuration is at a `singularity <https://www.quora.com/Robotics-What-is-meant-by-kinematic-singularity>`_, so the first
-        ## thing we want to do is move it to a slightly better configuration.
-        ## We use the constant `tau = 2*pi <https://en.wikipedia.org/wiki/Turn_(angle)#Tau_proposals>`_ for convenience:
-        # We get the joint values from the group and change some of the values:
-
-        #print(move_group.get_interface_description())
-        
-        joint_goal = move_group.get_current_joint_values()
-        joint_goal[0] = 0
-        joint_goal[1] = -tau / 9
-        joint_goal[2] = -tau / 3
-        joint_goal[3] = -tau / 6
-        joint_goal[4] = 0
-        joint_goal[5] = tau / 6  # 1/6 of a turn
-        # joint_goal[6] = 0
-
-        # The go command can be called with joint values, poses, or without any
-        # parameters if you have already set the pose or joint target for the group
-        move_group.go(joint_goal, wait=True)
-
-        # Calling ``stop()`` ensures that there is no residual movement
-        move_group.stop()
-
-        ## END_SUB_TUTORIAL
-
-        # For testing:
-        current_joints = move_group.get_current_joint_values()
-
-        #print(move_group.get_planner_id())
-        print('yeah')
-        #print(move_group.get_interface_description())
-
-
-
-        return all_close(joint_goal, current_joints, 0.01)
+    def virtual_joint2arm(self):
+        robot = moveit_commander.RobotCommander()
+        scene = moveit_commander.PlanningSceneInterface()
+        # group_name = "jisaku6dof_arm"
+        group_name = "jisaku6dof_arm_no_virtual_joint"
+        move_group = moveit_commander.MoveGroupCommander(group_name)
+        display_trajectory_publisher = rospy.Publisher(
+            "/move_group/display_planned_path",
+            moveit_msgs.msg.DisplayTrajectory,
+            queue_size=20,
+        )
+        planning_frame = move_group.get_planning_frame()
+        print("============ Planning frame: %s" % planning_frame)
+        eef_link = move_group.get_end_effector_link()
+        print("============ End effector link: %s" % eef_link)
+        group_names = robot.get_group_names()
+        print("============ Available Planning Groups:", robot.get_group_names())
+        print("============ Printing robot state")
+        print(robot.get_current_state())
+        print("")
+        self.box_name = ""
+        self.robot = robot
+        self.scene = scene
+        self.move_group = move_group
+        self.display_trajectory_publisher = display_trajectory_publisher
+        self.planning_frame = planning_frame
+        self.eef_link = eef_link
+        self.group_names = group_names
 
     def go_to_pose_goal(self):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
         move_group = self.move_group
+        robot = self.robot
+        robot_state = robot.get_current_state()
 
+        # euler = np.array([ 0, 0, 30])
+        # rot = Rotation.from_euler('XYZ', euler, degrees=True)
+        # rotation = rot.as_quat()
+        # rotation = [0., 0., 0.25881905, 0.96592583]
+        rotation = [0., 0., 0.70710678, 0.70710678]
+        multi_dof_joint_state = robot_state.multi_dof_joint_state
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("->")
+        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
+        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
+        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
+        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("")
+        # print(robot_state)
+
+        move_group.set_start_state(robot_state)
         ## BEGIN_SUB_TUTORIAL plan_to_pose
         ##
         ## Planning to a Pose Goal
@@ -302,12 +304,14 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         #move_group.set_pose_target(pose_goal)
 
-        move_group.set_position_target([-0.3, -0.2, 0.9])
+        move_group.set_position_target([0.3, 0.2, 0.1])
 
         #move_group.set_orientation_target([0, -1, 0, 0])
 
         ## Now, we call the planner to compute the plan and execute it.
-        plan = move_group.go(wait=True)
+        # plan = move_group.go(wait=True)
+        plan = move_group.plan()[1]
+        print(plan)
         # Calling `stop()` ensures that there is no residual movement
         move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -319,7 +323,10 @@ class MoveGroupPythonInterfaceTutorial(object):
         # For testing:
         # Note that since this section of code will not be included in the tutorials
         # we use the class variable rather than the copied state variable
+        end_effector_link = move_group.get_end_effector_link()
+        print("end_effector: {}".format(end_effector_link))
         current_pose = self.move_group.get_current_pose().pose
+        print("current_pose: {}". format(current_pose))
         return all_close(pose_goal, current_pose, 0.01)
 
     def plan_cartesian_path(self, scale=1):
@@ -465,7 +472,7 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ## First, we will create a box in the planning scene between the fingers:
         box_pose = geometry_msgs.msg.PoseStamped()
-        box_pose.header.frame_id = "panda_hand"
+        box_pose.header.frame_id = "jisaku6dof_arm_no_virtual_joint"
         box_pose.pose.orientation.w = 1.0
         box_pose.pose.position.z = 0.11  # above the panda_hand frame
         box_name = "box"
@@ -567,12 +574,20 @@ def main():
         input(
             "============ Press `Enter` to test move frame ..."
         )
-        # tutorial.move_frame_on_multi()
-        tutorial.move_frame_on_go_to_joint()
+        tutorial.move_frame_on_multi()
+        # tutorial.move_frame_on_go_to_joint()
         input(
-            "============ Press `Enter` to execute a movement using a joint state goal ..."
+            "============ Press `Enter` to shift group virtual_joint2arm ..."
         )
-        tutorial.go_to_joint_state()
+        tutorial.virtual_joint2arm()
+
+        # input(
+        #     "============ Press `Enter` to execute a movement using a joint state goal ..."
+        # )
+        # tutorial.go_to_joint_state()
+
+        # input("============ Press `Enter` to add a box to the planning scene ...")
+        # tutorial.add_box()
 
         
 
@@ -591,8 +606,7 @@ def main():
         input("============ Press `Enter` to execute a saved path ...")
         tutorial.execute_plan(cartesian_plan)
 
-        input("============ Press `Enter` to add a box to the planning scene ...")
-        tutorial.add_box()
+
 
         input("============ Press `Enter` to attach a Box to the Panda robot ...")
         tutorial.attach_box()
@@ -629,7 +643,7 @@ if __name__ == "__main__":
 ##    http://docs.ros.org/noetic/api/moveit_commander/html/classmoveit__commander_1_1move__group_1_1MoveGroupCommander.html
 ##
 ## .. _RobotCommander:
-##    http://docs.ros.org/noetic/api/moveit_commander/html/classmoveit__commander_1_1robot_1_1RobotCommander.html
+##    http://docs.ros.org/noetic/a基準i/moveit_commander/html/classmoveit__commander_1_1robot_1_1RobotCommander.html
 ##
 ## .. _PlanningSceneInterface:
 ##    http://docs.ros.org/noetic/api/moveit_commander/html/classmoveit__commander_1_1planning__scene__interface_1_1PlanningSceneInterface.html
