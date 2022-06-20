@@ -135,8 +135,8 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## arm planning group.
         ## This interface can be used to plan and execute motions:
         # group_name = "jisaku6dof_arm"
-        # group_name = "jisaku6dof_arm_no_virtual_joint"
-        group_name = "virtual_joint"
+        group_name = "jisaku6dof_arm_no_virtual_joint"
+        # group_name = "virtual_joint"
         move_group = moveit_commander.MoveGroupCommander(group_name)
 
         ## Create a `DisplayTrajectory`_ ROS publisher which is used t o display
@@ -181,6 +181,44 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.planning_frame = planning_frame
         self.eef_link = eef_link
         self.group_names = group_names
+    
+    def go_to_joint_state(self):
+        move_group = self.move_group
+        #print(move_group.get_interface_description())
+        
+        joint_goal = move_group.get_current_joint_values()
+        joint_goal[0] = 0
+        joint_goal[1] = -tau / 9
+        joint_goal[2] = -tau / 9
+        joint_goal[3] = -tau / 6
+        joint_goal[4] = 0
+        joint_goal[5] = tau / 6  
+        move_group.go(joint_goal, wait=True)
+        move_group.stop()
+
+        current_joints = move_group.get_current_joint_values()
+
+        #print(move_group.get_planner_id())
+        print('yeah')
+        #print(move_group.get_interface_description())
+
+        return all_close(joint_goal, current_joints, 0.01)
+    
+    def go_to_start_joint_state(self):
+        move_group = self.move_group
+        #print(move_group.get_interface_description())
+        # print("get_named_targets()", move_group.get_named_targets())
+        # print("get_named_target_values(target)", move_group.get_named_target_values("start"))
+        
+        move_group.set_named_target("start")
+        move_group.go(wait=True)
+        move_group.stop()
+
+        current_joints = move_group.get_current_joint_values()
+
+        #print(move_group.get_planner_id())
+        print('yeah')
+        #print(move_group.get_interface_description())
 
     def move_frame_on_multi(self):
         move_group = self.move_group
@@ -263,6 +301,26 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.eef_link = eef_link
         self.group_names = group_names
 
+    def set_start_state(self, rotation=None):
+        move_group = self.move_group
+        robot = self.robot
+        robot_state = robot.get_current_state()
+
+        rotation = [0., 0., 0.70710678, 0.70710678]
+        multi_dof_joint_state = robot_state.multi_dof_joint_state
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("->")
+        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
+        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
+        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
+        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("")
+        # print(robot_state)
+
+        move_group.set_start_state(robot_state)
+
+
     def go_to_pose_goal(self):
         move_group = self.move_group
         robot = self.robot
@@ -285,18 +343,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         # print(robot_state)
 
         move_group.set_start_state(robot_state)
-        ## BEGIN_SUB_TUTORIAL plan_to_pose
-        ##
-        ## Planning to a Pose Goal
-        ## ^^^^^^^^^^^^^^^^^^^^^^^
-        ## We can plan a motion for this group to a desired pose for the
-        ## end-effector:
-        pose_goal = geometry_msgs.msg.Pose()
-        pose_goal.orientation.w = 1.0
-        pose_goal.position.x = 0.4
-        pose_goal.position.y = 0.1
-        pose_goal.position.z = 0.5
-
 
         #print(move_group.get_interface_description())
 
@@ -312,37 +358,51 @@ class MoveGroupPythonInterfaceTutorial(object):
         # plan = move_group.go(wait=True)
         plan = move_group.plan()[1]
         print(plan)
+        self.plan = plan
+        # move_group.execute(plan, wait=True)
         # Calling `stop()` ensures that there is no residual movement
         move_group.stop()
         # It is always good to clear your targets after planning with poses.
         # Note: there is no equivalent function for clear_joint_value_targets()
         move_group.clear_pose_targets()
 
-        ## END_SUB_TUTORIAL
-
-        # For testing:
-        # Note that since this section of code will not be included in the tutorials
-        # we use the class variable rather than the copied state variable
         end_effector_link = move_group.get_end_effector_link()
         print("end_effector: {}".format(end_effector_link))
         current_pose = self.move_group.get_current_pose().pose
         print("current_pose: {}". format(current_pose))
-        return all_close(pose_goal, current_pose, 0.01)
+        # return all_close(pose_goal, current_pose, 0.01)
+
+    def check_plan(self):
+        move_group = self.move_group
+        robot = self.robot
+        plan = self.plan
+        
+        robot_state = robot.get_current_state()
+        rotation = [0., 0., 0., 0.]
+        multi_dof_joint_state = robot_state.multi_dof_joint_state
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("->")
+        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
+        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
+        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
+        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
+        print(multi_dof_joint_state.transforms[0].rotation)
+        print("")
+        # print(robot_state)
+
+        move_group.set_start_state(robot_state)
+
+        move_group.execute(plan, wait=True)
+        move_group.stop()
+
+        end_effector_link = move_group.get_end_effector_link()
+        print("end_effector: {}".format(end_effector_link))
+        current_pose = self.move_group.get_current_pose().pose
+        print("current_pose: {}". format(current_pose))
 
     def plan_cartesian_path(self, scale=1):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
         move_group = self.move_group
 
-        ## BEGIN_SUB_TUTORIAL plan_cartesian_path
-        ##
-        ## Cartesian Paths
-        ## ^^^^^^^^^^^^^^^
-        ## You can plan a Cartesian path directly by specifying a list of waypoints
-        ## for the end-effector to go through. If executing  interactively in a
-        ## Python shell, set scale = 1.0.
-        ##
         waypoints = []
 
         wpose = move_group.get_current_pose().pose
@@ -356,11 +416,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         wpose.position.y -= scale * 0.1  # Third move sideways (y)
         waypoints.append(copy.deepcopy(wpose))
 
-        # We want the Cartesian path to be interpolated at a resolution of 1 cm
-        # which is why we will specify 0.01 as the eef_step in Cartesian
-        # translation.  We will disable the jump threshold by setting it to 0.0,
-        # ignoring the check for infeasible jumps in joint space, which is sufficient
-        # for this tutorial.
         (plan, fraction) = move_group.compute_cartesian_path(
             waypoints, 0.01, 0.0  # waypoints to follow  # eef_step
         )  # jump_threshold
@@ -372,23 +427,9 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## END_SUB_TUTORIAL
 
     def display_trajectory(self, plan):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
         robot = self.robot
         display_trajectory_publisher = self.display_trajectory_publisher
 
-        ## BEGIN_SUB_TUTORIAL display_trajectory
-        ##
-        ## Displaying a Trajectory
-        ## ^^^^^^^^^^^^^^^^^^^^^^^
-        ## You can ask RViz to visualize a plan (aka trajectory) for you. But the
-        ## group.plan() method does this automatically so this is not that useful
-        ## here (it just displays the same trajectory again):
-        ##
-        ## A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
-        ## We populate the trajectory_start with our current robot state to copy over
-        ## any AttachedCollisionObjects and add our plan to the trajectory.
         display_trajectory = moveit_msgs.msg.DisplayTrajectory()
         display_trajectory.trajectory_start = robot.get_current_state()
         display_trajectory.trajectory.append(plan)
@@ -571,29 +612,41 @@ def main():
         )
         tutorial = MoveGroupPythonInterfaceTutorial()
 
+        # input(
+        #     "============ Press `Enter` to test move using joint state ..."
+        # )
+        # tutorial.go_to_joint_state()
+        # input(
+        #     "============ Press `Enter` to test move using start joint state ..."
+        # )
+        # tutorial.go_to_start_joint_state()
+
         input(
             "============ Press `Enter` to test move frame ..."
         )
         tutorial.move_frame_on_multi()
         # tutorial.move_frame_on_go_to_joint()
-        input(
-            "============ Press `Enter` to shift group virtual_joint2arm ..."
-        )
-        tutorial.virtual_joint2arm()
-
         # input(
-        #     "============ Press `Enter` to execute a movement using a joint state goal ..."
+            # "============ Press `Enter` to shift group virtual_joint2arm ..."
         # )
-        # tutorial.go_to_joint_state()
-
-        # input("============ Press `Enter` to add a box to the planning scene ...")
-        # tutorial.add_box()
+        # tutorial.virtual_joint2arm()
 
         
 
 
-        input("============ Press `Enter` to execute a movement using a pose goal ...")
+        input("============ Press `Enter` to plan a movement using a position goal ...")
         tutorial.go_to_pose_goal()
+
+        input("============ Press `Enter` to plan and display a Cartesian path ...")
+        cartesian_plan, fraction = tutorial.plan_cartesian_path()
+
+        input(
+            "============ Press `Enter` to display a saved trajectory (this will replay the Cartesian path)  ..."
+        )
+        tutorial.display_trajectory(cartesian_plan)
+
+        input("============ Press `Enter` to test a plan ...")
+        tutorial.check_plan()
 
         input("============ Press `Enter` to plan and display a Cartesian path ...")
         cartesian_plan, fraction = tutorial.plan_cartesian_path()
