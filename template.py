@@ -16,26 +16,6 @@
 class Item:
     pass
 
-#インスタンス生成
-    #クラス名()
-    #基本的に変数に代入する
-
-item1 = Item()
-
-#インスタンス変数のセット
-    #インスタンス.インスタンス変数名 = セットする値
-
-item1.name = 'sord'
-item1.price = 5000
-item1.special_skill = 'high'
-
-#インスタンス変数の呼び出し
-print(item1.name)
-print(item1.price)
-print(item1.special_skill)
-
-
-
 #クラスの定義
     #class クラス名
 
@@ -68,10 +48,30 @@ class User:
     #引数は__init__で設定した引数に合わせる
     #__init__メソッドが自動的に実行される
 
-user1 = User('SHIBAYAMA')
+if __name__ == '__main__':
 
-#メソッド呼び出し
-    #インスタンス.メソッド名(引数,,,)
+    #インスタンス生成
+    #クラス名()
+    #基本的に変数に代入する
 
-user1.init_message()
-user1.hello('hokkaido')
+    item1 = Item()
+
+    #インスタンス変数のセット
+        #インスタンス.インスタンス変数名 = セットする値
+
+    item1.name = 'sord'
+    item1.price = 5000
+    item1.special_skill = 'high'
+
+    #インスタンス変数の呼び出し
+    print(item1.name)
+    print(item1.price)
+    print(item1.special_skill)
+    
+    user1 = User('SHIBAYAMA')
+
+    #メソッド呼び出し
+        #インスタンス.メソッド名(引数,,,)
+
+    user1.init_message()
+    user1.hello('hokkaido')

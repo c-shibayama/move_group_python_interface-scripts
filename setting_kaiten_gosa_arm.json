@@ -1,0 +1,65 @@
+{
+  "link_info":[
+      {
+          "name":"Base",
+          "omega":[0.0, 0.0, 1.0],
+          "joint":false,
+          "offset":[0.0, 0.0, 0.05]
+      },
+      {
+          "name":"Link1",
+          "omega":[0.0, 0.0, 1.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.1]
+      },
+      {
+          "name":"Link2",
+          "omega":[0.0, -1.0, 0.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.3]
+      },
+      {
+          "name":"Link3",
+          "omega":[0.0, -1.0, 0.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.2]
+      },
+      {
+          "name":"Link4",
+          "omega":[0.0, 0.0, 1.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.2]
+      },
+      {
+          "name":"Link5",
+          "omega":[0.0, -1.0, 0.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.05]
+      },
+      {
+          "name":"Link6",
+          "omega":[0.0, 0.0, 1.0],
+          "joint":true,
+          "offset":[0.0, 0.0, 0.1]
+      },
+      {
+          "name":"virtual_Hand",
+          "omega":[0.0, 0.0, 0.0],
+          "joint":false,
+          "offset":[0.0, 0.0, 0.0]
+      }
+  ],
+  "interaction_info_ur":[
+      [1, 0.0, false, true],
+      [2, 0.0, false, true],
+      [2, 0.333, false, true],
+      [2, 0.666, false, true],
+      [3, 0.0, false, true],
+      [3, 0.333, false, true],
+      [3, 0.666, false, true],
+      [4, 0.0, false, true],
+      [4, 0.333, false, true],
+      [4, 0.666, false, true],
+      [5, 0.0, true, true]
+  ]
+}

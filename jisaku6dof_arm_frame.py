@@ -57,6 +57,10 @@ import geometry_msgs.msg
 import csv
 from moveit_msgs.msg import PlanningScene, ObjectColor
 import numpy as np
+from moveit_msgs.srv import GetPositionFK
+from moveit_msgs.srv import GetStateValidity
+from template import User
+# from simulation3D import Simulation
 
 try:
     from math import pi, tau, dist, fabs, cos
@@ -70,9 +74,13 @@ except:  # For Python 2 compatibility
 
 
 from std_msgs.msg import String
+from std_msgs.msg import Header
 from moveit_commander.conversions import pose_to_list
 from sensor_msgs.msg import MultiDOFJointState
 from moveit_msgs.msg import RobotState
+from moveit_msgs.srv import GetPositionFKRequest
+from moveit_msgs.srv import GetStateValidityRequest
+
 
 ## END_SUB_TUTORIAL
 
@@ -182,28 +190,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         self.eef_link = eef_link
         self.group_names = group_names
     
-    def go_to_joint_state(self):
-        move_group = self.move_group
-        #print(move_group.get_interface_description())
-        
-        joint_goal = move_group.get_current_joint_values()
-        joint_goal[0] = 0
-        joint_goal[1] = -tau / 9
-        joint_goal[2] = -tau / 9
-        joint_goal[3] = -tau / 6
-        joint_goal[4] = 0
-        joint_goal[5] = tau / 6  
-        move_group.go(joint_goal, wait=True)
-        move_group.stop()
-
-        current_joints = move_group.get_current_joint_values()
-
-        #print(move_group.get_planner_id())
-        print('yeah')
-        #print(move_group.get_interface_description())
-
-        return all_close(joint_goal, current_joints, 0.01)
-    
     def go_to_start_joint_state(self):
         move_group = self.move_group
         #print(move_group.get_interface_description())
@@ -220,117 +206,58 @@ class MoveGroupPythonInterfaceTutorial(object):
         print('yeah')
         #print(move_group.get_interface_description())
 
-    def move_frame_on_multi(self):
-        move_group = self.move_group
+    def get_fk(self, joint_positions=None):
         robot = self.robot
+
+        compute_fk = rospy.ServiceProxy('/compute_fk', GetPositionFK)
+        request = GetPositionFKRequest()
+        # request.header = Header()
+        link_name = robot.get_link_names()
+        # print(link_name)
+        request.fk_link_names = link_name
         robot_state = robot.get_current_state()
+        request.robot_state = robot_state
+        if not joint_positions is None:
+            request.robot_state.joint_state.position = joint_positions
+        response = compute_fk(request)
+        eef_pose_stamped = response.pose_stamped[len(response.fk_link_names)-1]
+        frame_id = eef_pose_stamped.header.frame_id
+        eef_position = eef_pose_stamped.pose.position
+        # print("frame_id: {} \neef_position: \n{}" .format(frame_id, eef_position))
+        
+        return frame_id, eef_position
 
-        # euler = np.array([ 0, 0, 30])
-        # rot = Rotation.from_euler('XYZ', euler, degrees=True)
-        # rotation = rot.as_quat()
-        rotation = [0., 0., 0.25881905, 0.96592583]
-        multi_dof_joint_state = robot_state.multi_dof_joint_state
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("->")
-        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
-        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
-        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
-        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("")
-        # print(robot_state)
-        self.robot_state = robot_state
+        # for i in range(len(response.pose_stamped)):
+        #     print("{}:\n{}" .format(request.fk_link_names[i], response.pose_stamped[i].pose.position))
 
-        move_group.set_start_state(robot_state)
-        # current_joints = move_group.get_current_joint_values()
-        # print(current_joints)
-        # print("============ Printing robot state")
-        # print(self.robot.get_current_state())
-    
-    def move_frame_on_go_to_joint(self):
+    def check_collision(self, joint_positions=None):
+        robot = self.robot
         move_group = self.move_group
+        
+        check_state_validity = rospy.ServiceProxy('/check_state_validity', GetStateValidity)
+        request = GetStateValidityRequest()
+        robot_state = robot.get_current_state()
+        request.robot_state = robot_state
+        if not joint_positions is None:
+            request.robot_state.joint_state.position = joint_positions
+        group_name = move_group.get_name()
+        request.group_name = group_name
+        response = check_state_validity(request)
+        valid = response.valid
 
-        joint_goal = move_group.get_current_joint_values()
-        print(joint_goal)
-        # joint_goal[0] = 0.5
-        rotation = [0., 0., 0.70710678, 0.70710678]
-        for i in range(4):
-            joint_goal[i+3] = rotation[i]
-        print(joint_goal)
-        move_group.set_joint_value_target("virtual_joint", [0, 0, 0, 0., 0., 0.25881905, 0.96592583])
-        # move_group.go(joint_goal, wait=True)
-        move_group.go()
-
-        move_group.stop()
-
-        current_joints = move_group.get_current_joint_values()
-        print(current_joints)
-        print("============ Printing robot state")
-        print(self.robot.get_current_state())
-        print("")
-
-
-        return all_close(joint_goal, current_joints, 0.01)
-
-    def virtual_joint2arm(self):
-        robot = moveit_commander.RobotCommander()
-        scene = moveit_commander.PlanningSceneInterface()
-        # group_name = "jisaku6dof_arm"
-        group_name = "jisaku6dof_arm_no_virtual_joint"
-        move_group = moveit_commander.MoveGroupCommander(group_name)
-        display_trajectory_publisher = rospy.Publisher(
-            "/move_group/display_planned_path",
-            moveit_msgs.msg.DisplayTrajectory,
-            queue_size=20,
-        )
-        planning_frame = move_group.get_planning_frame()
-        print("============ Planning frame: %s" % planning_frame)
-        eef_link = move_group.get_end_effector_link()
-        print("============ End effector link: %s" % eef_link)
-        group_names = robot.get_group_names()
-        print("============ Available Planning Groups:", robot.get_group_names())
-        print("============ Printing robot state")
-        print(robot.get_current_state())
-        print("")
-        self.box_name = ""
-        self.robot = robot
-        self.scene = scene
-        self.move_group = move_group
-        self.display_trajectory_publisher = display_trajectory_publisher
-        self.planning_frame = planning_frame
-        self.eef_link = eef_link
-        self.group_names = group_names
+        return valid
 
     def set_start_state(self, rotation=None):
         move_group = self.move_group
         robot = self.robot
-        robot_state = robot.get_current_state()
-
-        rotation = [0., 0., 0.70710678, 0.70710678]
-        multi_dof_joint_state = robot_state.multi_dof_joint_state
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("->")
-        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
-        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
-        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
-        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("")
-        # print(robot_state)
-
-        move_group.set_start_state(robot_state)
-
-
-    def go_to_pose_goal(self):
-        move_group = self.move_group
-        robot = self.robot
-        robot_state = robot.get_current_state()
+        if rotation == None:
+            rotation = [0., 0., 0.70710678, 0.70710678]
 
         # euler = np.array([ 0, 0, 30])
         # rot = Rotation.from_euler('XYZ', euler, degrees=True)
         # rotation = rot.as_quat()
         # rotation = [0., 0., 0.25881905, 0.96592583]
-        rotation = [0., 0., 0.70710678, 0.70710678]
+        robot_state = robot.get_current_state()
         multi_dof_joint_state = robot_state.multi_dof_joint_state
         print(multi_dof_joint_state.transforms[0].rotation)
         print("->")
@@ -344,87 +271,67 @@ class MoveGroupPythonInterfaceTutorial(object):
 
         move_group.set_start_state(robot_state)
 
+
+    def plan_on_error_base(self):
+        move_group = self.move_group
+        robot = self.robot
+        robot_state = robot.get_current_state()
+
+        self.set_start_state()
         #print(move_group.get_interface_description())
-
         #move_group.set_planner_id('RRTkConfigDefault')
-
-        #move_group.set_pose_target(pose_goal)
-
-        move_group.set_position_target([0.3, 0.2, 0.1])
-
-        #move_group.set_orientation_target([0, -1, 0, 0])
-
-        ## Now, we call the planner to compute the plan and execute it.
+        target_position = [0.3, 0.2, 0.1]
+        move_group.set_position_target(target_position)
         # plan = move_group.go(wait=True)
         plan = move_group.plan()[1]
         print(plan)
         self.plan = plan
         # move_group.execute(plan, wait=True)
-        # Calling `stop()` ensures that there is no residual movement
-        move_group.stop()
-        # It is always good to clear your targets after planning with poses.
-        # Note: there is no equivalent function for clear_joint_value_targets()
+        # move_group.stop()
         move_group.clear_pose_targets()
-
-        end_effector_link = move_group.get_end_effector_link()
-        print("end_effector: {}".format(end_effector_link))
+        # end_effector_link = move_group.get_end_effector_link()
+        # print("end_effector: {}".format(end_effector_link))
         current_pose = self.move_group.get_current_pose().pose
         print("current_pose: {}". format(current_pose))
-        # return all_close(pose_goal, current_pose, 0.01)
+        print("target_position = {}" .format(target_position))
+        
+        self.target_position = target_position
 
-    def check_plan(self):
+    def plan_joints2positions(self):
+        plan = self.plan
+        target_position = self.target_position
+
+        points = plan.joint_trajectory.points
+        num_points = len(points)
+        print("経路点: {}個" .format(num_points))
+        for i in range(num_points):
+            joint_positions = points[i].positions
+            frame_id, eef_position = self.get_fk(joint_positions)
+            valid_bool = self.check_collision(joint_positions)
+            if i == 0:
+                print("frame_id: {}" .format(frame_id))
+            print("{}: joint_positions = {}" .format(i, joint_positions))
+            print("eef_position = {}" .format(eef_position))
+            if not valid_bool:
+                print("valid" .format(valid_bool))
+
+        print("\noriginal target_position = {}" .format(target_position))
+
+    def execute_plan_on_error_base(self):
         move_group = self.move_group
         robot = self.robot
         plan = self.plan
-        
+        target_position = self.target_position
+
         robot_state = robot.get_current_state()
-        rotation = [0., 0., 0., 0.]
-        multi_dof_joint_state = robot_state.multi_dof_joint_state
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("->")
-        multi_dof_joint_state.transforms[0].rotation.x = rotation[0]
-        multi_dof_joint_state.transforms[0].rotation.y = rotation[1]
-        multi_dof_joint_state.transforms[0].rotation.z = rotation[2]
-        multi_dof_joint_state.transforms[0].rotation.w = rotation[3]
-        print(multi_dof_joint_state.transforms[0].rotation)
-        print("")
-        # print(robot_state)
-
-        move_group.set_start_state(robot_state)
-
         move_group.execute(plan, wait=True)
         move_group.stop()
-
-        end_effector_link = move_group.get_end_effector_link()
-        print("end_effector: {}".format(end_effector_link))
+        move_group.clear_pose_targets()
+        # end_effector_link = move_group.get_end_effector_link()
+        # print("end_effector: {}".format(end_effector_link))
         current_pose = self.move_group.get_current_pose().pose
         print("current_pose: {}". format(current_pose))
-
-    def plan_cartesian_path(self, scale=1):
-        move_group = self.move_group
-
-        waypoints = []
-
-        wpose = move_group.get_current_pose().pose
-        wpose.position.z -= scale * 0.1  # First move up (z)
-        wpose.position.y += scale * 0.2  # and sideways (y)
-        waypoints.append(copy.deepcopy(wpose))
-
-        wpose.position.x += scale * 0.1  # Second move forward/backwards in (x)
-        waypoints.append(copy.deepcopy(wpose))
-
-        wpose.position.y -= scale * 0.1  # Third move sideways (y)
-        waypoints.append(copy.deepcopy(wpose))
-
-        (plan, fraction) = move_group.compute_cartesian_path(
-            waypoints, 0.01, 0.0  # waypoints to follow  # eef_step
-        )  # jump_threshold
-        #print(plan)
-
-        # Note: We are just planning, not asking move_group to actually move the robot yet:
-        return plan, fraction
-
-        ## END_SUB_TUTORIAL
+        print("\noriginal target_position = {}" .format(target_position))
 
     def display_trajectory(self, plan):
         robot = self.robot
@@ -437,24 +344,6 @@ class MoveGroupPythonInterfaceTutorial(object):
         print(display_trajectory)
         display_trajectory_publisher.publish(display_trajectory)
 
-        ## END_SUB_TUTORIAL
-
-    def execute_plan(self, plan):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
-        move_group = self.move_group
-
-        ## BEGIN_SUB_TUTORIAL execute_plan
-        ##
-        ## Executing a Plan
-        ## ^^^^^^^^^^^^^^^^
-        ## Use execute if you would like the robot to follow
-        ## the plan that has already been computed:
-        move_group.execute(plan, wait=True)
-
-        ## **Note:** The robot's current joint state must be within some tolerance of the
-        ## first waypoint in the `RobotTrajectory`_ or ``execute()`` will fail
         ## END_SUB_TUTORIAL
 
     def wait_for_state_update(
@@ -513,68 +402,22 @@ class MoveGroupPythonInterfaceTutorial(object):
         ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ## First, we will create a box in the planning scene between the fingers:
         box_pose = geometry_msgs.msg.PoseStamped()
-        box_pose.header.frame_id = "jisaku6dof_arm_no_virtual_joint"
+        box_pose.header.frame_id = "world"
         box_pose.pose.orientation.w = 1.0
-        box_pose.pose.position.z = 0.11  # above the panda_hand frame
+        target_position = [0.2, -0.3, 0.1]
+        box_pose.pose.position.x = target_position[0]
+        box_pose.pose.position.y = target_position[1]
+        box_pose.pose.position.z = target_position[2]
         box_name = "box"
-        scene.add_box(box_name, box_pose, size=(0.075, 0.075, 0.075))
+        height = 0.1
+        radius = 0.02
+        scene.add_cylinder(box_name, box_pose, height, radius)
 
         ## END_SUB_TUTORIAL
         # Copy local variables back to class variables. In practice, you should use the class
         # variables directly unless you have a good reason not to.
         self.box_name = box_name
         return self.wait_for_state_update(box_is_known=True, timeout=timeout)
-
-    def attach_box(self, timeout=4):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
-        box_name = self.box_name
-        robot = self.robot
-        scene = self.scene
-        eef_link = self.eef_link
-        group_names = self.group_names
-
-        ## BEGIN_SUB_TUTORIAL attach_object
-        ##
-        ## Attaching Objects to the Robot
-        ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ## Next, we will attach the box to the Panda wrist. Manipulating objects requires the
-        ## robot be able to touch them without the planning scene reporting the contact as a
-        ## collision. By adding link names to the ``touch_links`` array, we are telling the
-        ## planning scene to ignore collisions between those links and the box. For the Panda
-        ## robot, we set ``grasping_group = 'hand'``. If you are using a different robot,
-        ## you should change this value to the name of your end effector group name.
-        grasping_group = "hand"
-        touch_links = robot.get_link_names(group=grasping_group)
-        scene.attach_box(eef_link, box_name, touch_links=touch_links)
-        ## END_SUB_TUTORIAL
-
-        # We wait for the planning scene to update.
-        return self.wait_for_state_update(
-            box_is_attached=True, box_is_known=False, timeout=timeout
-        )
-
-    def detach_box(self, timeout=4):
-        # Copy class variables to local variables to make the web tutorials more clear.
-        # In practice, you should use the class variables directly unless you have a good
-        # reason not to.
-        box_name = self.box_name
-        scene = self.scene
-        eef_link = self.eef_link
-
-        ## BEGIN_SUB_TUTORIAL detach_object
-        ##
-        ## Detaching Objects from the Robot
-        ## ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ## We can also detach and remove the object from the planning scene:
-        scene.remove_attached_object(eef_link, name=box_name)
-        ## END_SUB_TUTORIAL
-
-        # We wait for the planning scene to update.
-        return self.wait_for_state_update(
-            box_is_known=True, box_is_attached=False, timeout=timeout
-        )
 
     def remove_box(self, timeout=4):
         # Copy class variables to local variables to make the web tutorials more clear.
@@ -611,71 +454,43 @@ def main():
             "============ Press `Enter` to begin the tutorial by setting up the moveit_commander ..."
         )
         tutorial = MoveGroupPythonInterfaceTutorial()
+        # Simulation3D = Simulation()
 
-        # input(
-        #     "============ Press `Enter` to test move using joint state ..."
-        # )
-        # tutorial.go_to_joint_state()
-        # input(
-        #     "============ Press `Enter` to test move using start joint state ..."
-        # )
-        # tutorial.go_to_start_joint_state()
+        # input("============ Press `Enter` to test pybind11 ...")
+        # tutorial.test()
 
-        input(
-            "============ Press `Enter` to test move frame ..."
-        )
-        tutorial.move_frame_on_multi()
-        # tutorial.move_frame_on_go_to_joint()
-        # input(
-            # "============ Press `Enter` to shift group virtual_joint2arm ..."
-        # )
-        # tutorial.virtual_joint2arm()
+        for i in range(2):
 
-        
+            # input("============ Press `Enter` to test simulation3D ...")
+            # Simulation3D.main_loop()
+            input("============ Press `Enter` to test move using start joint state ...")
+            tutorial.go_to_start_joint_state()
 
+            input("============ Press `Enter` to compute fk ...")
+            frame_id, eef_position = tutorial.get_fk()
+            print(frame_id)
+            print(eef_position)
 
-        input("============ Press `Enter` to plan a movement using a position goal ...")
-        tutorial.go_to_pose_goal()
+            input("============ Press `Enter` to plan a movement using a position goal on error base ...")
+            tutorial.plan_on_error_base()
 
-        input("============ Press `Enter` to plan and display a Cartesian path ...")
-        cartesian_plan, fraction = tutorial.plan_cartesian_path()
+            input("============ Press `Enter` to add a box to the planning scene ...")
+            tutorial.add_box()
 
-        input(
-            "============ Press `Enter` to display a saved trajectory (this will replay the Cartesian path)  ..."
-        )
-        tutorial.display_trajectory(cartesian_plan)
+            input("============ Press `Enter` to convert plan from joints to eef position ...")
+            tutorial.plan_joints2positions()
 
-        input("============ Press `Enter` to test a plan ...")
-        tutorial.check_plan()
+            input("============ Press `Enter` to execute plan a movement using a position goal on error base ...")
+            tutorial.execute_plan_on_error_base()
 
-        input("============ Press `Enter` to plan and display a Cartesian path ...")
-        cartesian_plan, fraction = tutorial.plan_cartesian_path()
-
-        input(
-            "============ Press `Enter` to display a saved trajectory (this will replay the Cartesian path)  ..."
-        )
-        tutorial.display_trajectory(cartesian_plan)
-
-        input("============ Press `Enter` to execute a saved path ...")
-        tutorial.execute_plan(cartesian_plan)
+            input("============ Press `Enter` to remove the box from the planning scene ...")
+            tutorial.remove_box()
 
 
+        input("============ Press `Enter` to add a box to the planning scene ...")
+        tutorial.add_box()
 
-        input("============ Press `Enter` to attach a Box to the Panda robot ...")
-        tutorial.attach_box()
-
-        input(
-            "============ Press `Enter` to plan and execute a path with an attached collision object ..."
-        )
-        cartesian_plan, fraction = tutorial.plan_cartesian_path(scale=-1)
-        tutorial.execute_plan(cartesian_plan)
-
-        input("============ Press `Enter` to detach the box from the Panda robot ...")
-        tutorial.detach_box()
-
-        input(
-            "============ Press `Enter` to remove the box from the planning scene ..."
-        )
+        input("============ Press `Enter` to remove the box from the planning scene ...")
         tutorial.remove_box()
 
         print("============ Python tutorial demo complete!")
@@ -687,6 +502,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 ## BEGIN_TUTORIAL
 ## .. _moveit_commander:
